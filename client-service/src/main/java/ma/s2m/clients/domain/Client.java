@@ -1,9 +1,7 @@
 package ma.s2m.clients.domain;
 
-
 import javax.persistence.*;
 import java.io.Serializable;
-
 
 /**
  * Client Entity.

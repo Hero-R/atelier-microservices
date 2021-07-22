@@ -1,34 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
+	<!-- lookup parent from repository -->
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>2.3.4.RELEASE</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
+	<!-- Project Description -->
 	<groupId>ma.s2m.clients</groupId>
 	<artifactId>client-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>client-service</name>
 	<description>Client Service</description>
 
+	<!-- Properties -->
 	<properties>
 		<java.version>1.8</java.version>
 		<swagger.version>2.9.2</swagger.version>
 	</properties>
 
+	<!-- Dependencies -->
 	<dependencies>
+		<!-- This dependency is used for Spring Data JPA with Hibernate. -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
+		<!-- This dependency is used for building the web application, including RESTful applications using Spring MVC. -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
+		<!-- This dependency is used to test Spring Boot applications with libraries, including JUnit, Hamcrest, and Mockito. -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
@@ -40,32 +47,29 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+		<!-- This dependency is used to connect Java application with the MySQL database. -->
 		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
 			<scope>runtime</scope>
 		</dependency>
-		<!-- la dépendance suivante permet de tester la couche d’accès aux données sans faire appel à un SGBD distant (avec une base h2 embarquée) -->
+		<!-- This dependency is used to test the data access layer without using a remote DBMS (with an on-board H2 base). -->
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
 			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>com.h2database</groupId>
-			<artifactId>h2</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<scope>test</scope>
 		</dependency>
-		<!-- convertir des objets Java en leur représentation JSON -->
+		<!-- This dependency can be used to convert Java Objects into their JSON representation. -->
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
 		</dependency>
-		<!-- générer la documentation swagger en utilisant springfox -->
+		<!-- This dependency is used to design and document your APIs at scale. -->
 		<dependency>
 			<groupId>io.springfox</groupId>
 			<artifactId>springfox-swagger2</artifactId>
@@ -78,6 +82,7 @@
 		</dependency>
 	</dependencies>
 
+	<!-- Build -->
 	<build>
 		<plugins>
 			<plugin>

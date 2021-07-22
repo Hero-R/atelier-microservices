@@ -18,10 +18,10 @@ import java.util.List;
 @RequestMapping("/api/client")
 public class ClientController {
 
+    private static final Logger log = LoggerFactory.getLogger(ClientController.class);
+
     @Autowired
     IClientService clientService;
-
-    private static final Logger log = LoggerFactory.getLogger(ClientController.class);
 
     // ----- Create a Client ----- //
     @PostMapping
