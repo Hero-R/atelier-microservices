@@ -18,8 +18,7 @@ import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = { ClientServiceApplication.class})
@@ -76,6 +75,7 @@ public class ClientServiceTest {
     @Test
     public void testDeleteClient() throws Exception {
         clientService.deleteClient(randomId);
+        assertNull(clientService.getClient(randomId));
     }
 
 }
