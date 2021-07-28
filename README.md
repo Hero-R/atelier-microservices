@@ -164,3 +164,196 @@ spring:
       ddl-auto: create
 ```
 - Use the Gson library to convert Java to JSON and vice versa.
+
+### Keycloak
+- For a local installation, just unzip the Keycloak version in the working directory.
+- To start Keycloak locally, just run the standalone.bat script located in the bin / directory.
+- Keycloak is started by default on localhost:8080
+- To be able to configure Keycloak, we need an admin account that we can create through the administration console.
+#### Keycloak & Spring Boot
+Now, we will try to secure the «client-service» application.
+- To secure a Spring Boot application with Keycloak, we will need two dependencies, the spring boot keycloak and spring-security starter :
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+<dependency>
+<groupId>org.keycloak</groupId>
+<artifactId>keycloak-spring-boot-starter</artifactId>
+</dependency>
+```
+- Add a «dependencyManagement» section to manage the keycloak starter :
+```xml
+<dependencyManagement>
+  <dependencies>
+    <dependency>
+      <groupId>org.keycloak.bom</groupId>
+      <artifactId>keycloak-adapter-bom</artifactId>
+      <version>${keycloak.version}</version>
+      <type>pom</type>
+      <scope>import</scope>
+    </dependency>
+  </dependencies>
+</dependencyManagement>
+```
+- Mention keycloak.version in the properties of pom.xml :
+```xml
+<keycloak.version>14.0.0</keycloak.version>
+```
+- Add a configuration class that will allow Keycloak to be integrated into spring-security and tweak the resulting config :
+```java
+// imports
+
+@KeycloakConfiguration
+@EnableGlobalMethodSecurity(prePostEnabled = true, proxyTargetClass = true)
+public class KeycloakSecurityConfiguration extends KeycloakWebSecurityConfigurerAdapter {
+    // ...
+}
+```
+#### Configuration Keycloak
+- Creation of a Keycloak domain / realm : ms-workshop.
+- Adding a client that corresponds to the resource (Client REST API created) that will request authentication from Keycloak : clients-app.
+- Configuration of the client « clients-app » : Access Type -> bearer-only.
+- Don't forget to write down the client's secret in the « Credentials » tab.
+- Application side configuration :
+```yml
+keycloak:
+  realm: ms-workshop
+  auth-server-url: http://localhost:8080/auth
+  resource: client-app
+  credentials:
+    secret: cad938e5-ea3b-4807-a480-ba9e580208cc
+  principal-attribute: preferred_username
+  bearer-only: true
+```
+- Start the client-service and go through postman to test the recovery of clients. 
+  => 401 Unauthorized !
+- To access the API:
+  + Create a user in the « ms-workshop » realm: login -> reda / password -> reda ;
+  + Create a frontend client with a "public" accessType to simulate a call from the HMI after the user has logged in ;
+  + Retrieve a token from Keycloak via curl and inject it into an « Authorization » type header and redo the test with postman :  
+    curl -X POST "http://localhost:8080/auth/realms/ms-workshop/protocol/openid-connect/token" -H "Content-Type: application/x-www-form-urlencoded" -d "username=reda" -d "password=reda" -d "grant_type=password" -d "client_id=frontend"  
+    Authorization : Bearer ...access_token...
+    
+#### Securing with a role
+- Add the @PreAuthorize annotation which will restrict access to the « getAllClients() » method in ClientController :
+```java
+@RestController
+@RequestMapping("/api/client")
+public class ClientController {
+    // Controller Methods...
+    @GetMapping
+    @PreAuthorize("hasRole('user')")
+    public ResponseEntity<List<Client>> getAllClients() {
+      log.info("Returning all clients from database.");
+      List<Client> clients = clientService.getAllClients();
+      return new ResponseEntity<>(clients, HttpStatus.OK);
+    }
+}
+```
+The test via postman becomes inconclusive => 403 Forbidden !
+- Create a user role in the « ms-workshop » realm ;
+- Associate a user with a role through the "Role Mappings" block of the user view ;  
+=> A new test via postman returns the expected result.
+
+#### Updating tests
+Action: Take charge of the security layer and make the necessary changes.
+- Create the ma.s2m.clients.config package in the test folder.
+- Add the following dependency in pom.xml :
+```xml
+<dependency>
+  <groupId>org.springframework.security</groupId>
+  <artifactId>spring-security-test</artifactId>
+  <scope>test</scope>
+</dependency>
+```
+- Add the following class (an annotation) in config package :
+```java
+package ma.s2m.clients.config;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
+import org.springframework.security.test.context.support.WithSecurityContext;
+
+@Retention(RetentionPolicy.RUNTIME)
+@WithSecurityContext(factory = WithMockOAuth2SecurityContextFactory.class)
+public @interface WithMockOAuth2Conext {
+
+    String authorities() default "";
+}
+```
+- Create the "WithMockOauth2SecurityContextFactory" class which will initiate a spring-security context by feeding it with the authorities declared in the "WithMockOauth2Context" annotation :
+```java
+package ma.s2m.clients.config;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.StringTokenizer;
+
+import org.keycloak.KeycloakPrincipal;
+import org.keycloak.KeycloakSecurityContext;
+import org.keycloak.adapters.RefreshableKeycloakSecurityContext;
+import org.keycloak.adapters.springsecurity.account.SimpleKeycloakAccount;
+import org.keycloak.adapters.springsecurity.token.KeycloakAuthenticationToken;
+import org.keycloak.representations.AccessToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.test.context.support.WithSecurityContextFactory;
+
+public class WithMockOAuth2SecurityContextFactory implements WithSecurityContextFactory<WithMockOAuth2Context> {
+
+    @Override
+    public SecurityContext createSecurityContext(WithMockOAuth2Context mockOAuth2Context) {
+
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        AccessToken accessToken = new AccessToken();
+        accessToken.setName("Test User");
+
+        KeycloakSecurityContext keycloakContext = new KeycloakSecurityContext("someTokenString", accessToken, "1111", null);
+        KeycloakPrincipal<KeycloakSecurityContext> principal = new KeycloakPrincipal<KeycloakSecurityContext>("Test User", keycloakContext);
+        List<String> securedActions = new ArrayList<>();
+        if (!mockOAuth2Context.authorities().isEmpty()) {
+
+            if (mockOAuth2Context.authorities().contains(" ")) {
+                StringTokenizer stringTokenizer = new StringTokenizer(mockOAuth2Context.authorities(), " ");
+                if (stringTokenizer.countTokens() > 0) {
+                    while (stringTokenizer.hasMoreTokens()) {
+                        securedActions.add("ROLE_".concat(stringTokenizer.nextToken()));
+                    }
+                }
+            } else {
+                securedActions.add("ROLE_".concat(mockOAuth2Context.authorities()));
+            }
+        }
+
+        RefreshableKeycloakSecurityContext ksc = new RefreshableKeycloakSecurityContext(null, null, "accessTokenString", accessToken, "idTokenString", null, "refreshTokenString");
+
+        SimpleKeycloakAccount account = new SimpleKeycloakAccount(principal, new HashSet<String>(securedActions), ksc);
+
+        context.setAuthentication(new KeycloakAuthenticationToken(account, false));
+
+        return context;
+    }
+}
+```
+- Add the annotation « @WithMockOauth2ScopeContext » to the test method « testGetClients » :
+```java
+// ...
+public class ClientControllerTest { 
+    // ...
+    @Test
+    @WithMockOAuth2Context(authorities = "user")
+    public void testGetClients() throws Exception {
+      Client client1 = new Client("Test1", "Test1", "test1@test.ma", "Address 1");
+      Client client2 = new Client("Test2", "Test2", "test2@test.ma", "Address 2");
+      when(service.getAllClients()).thenReturn(Stream.of(client1, client2).collect(Collectors.toList()));
+
+      mockMvc.perform(MockMvcRequestBuilders.get("/api/client").accept(MediaType.APPLICATION_JSON)).andExpect(jsonPath("$", hasSize(2))).andReturn();
+    }
+    // ...
+}
+```
+=> Tests are again conclusive.
