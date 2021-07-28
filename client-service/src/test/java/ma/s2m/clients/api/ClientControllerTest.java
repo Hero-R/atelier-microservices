@@ -1,6 +1,7 @@
 package ma.s2m.clients.api;
 
 import com.google.gson.Gson;
+import ma.s2m.clients.config.WithMockOAuth2Context;
 import ma.s2m.clients.domain.Client;
 import ma.s2m.clients.service.impl.ClientService;
 import org.junit.Before;
@@ -54,6 +55,7 @@ public class ClientControllerTest {
     }
 
     @Test
+    @WithMockOAuth2Context(authorities = "user")
     public void testGetClients() throws Exception {
         Client client1 = new Client("Test1", "Test1", "test1@test.ma", "Address 1");
         Client client2 = new Client("Test2", "Test2", "test2@test.ma", "Address 2");
