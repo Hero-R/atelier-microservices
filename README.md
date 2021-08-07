@@ -357,3 +357,107 @@ public class ClientControllerTest {
 }
 ```
 => Tests are again conclusive.
+
+#### Swagger Integration with Keycloak
+Report: Launch the swagger HMI and retest your API => 401 Unauthorized !
+- Create a swagger-ui client with an accessType "confidential" to allow swagger to negotiate a token with Keycloak ;
+- Modify the "SwaggerConfig" class as follows :
+```java
+package ma.s2m.clients.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import springfox.documentation.builders.ApiInfoBuilder;
+import springfox.documentation.builders.AuthorizationCodeGrantBuilder;
+import springfox.documentation.builders.OAuthBuilder;
+import springfox.documentation.builders.PathSelectors;
+import springfox.documentation.builders.RequestHandlerSelectors;
+import springfox.documentation.service.ApiInfo;
+import springfox.documentation.service.AuthorizationScope;
+import springfox.documentation.service.Contact;
+import springfox.documentation.service.GrantType;
+import springfox.documentation.service.SecurityReference;
+import springfox.documentation.service.SecurityScheme;
+import springfox.documentation.service.TokenEndpoint;
+import springfox.documentation.service.TokenRequestEndpoint;
+import springfox.documentation.spi.DocumentationType;
+import springfox.documentation.spi.service.contexts.SecurityContext;
+import springfox.documentation.spring.web.plugins.Docket;
+import springfox.documentation.swagger.web.SecurityConfiguration;
+import springfox.documentation.swagger.web.SecurityConfigurationBuilder;
+import springfox.documentation.swagger2.annotations.EnableSwagger2;
+
+import java.util.Arrays;
+
+@Configuration
+@EnableSwagger2
+public class SwaggerConfig {
+
+    private static final String OAUTH_NAME = "spring_oauth";
+
+    @Value("${keycloak.auth-server-url}")
+    private String authServer;
+
+    @Value("${swagger-ui.secret}")
+    private String clientSecret;
+
+    @Value("${swagger-ui.client}")
+    private String clientID;
+
+    @Value("${keycloak.realm}")
+    private String realm;
+
+    @Value("${spring.application.name}")
+    private String groupName;
+
+    @Bean
+    public Docket api() {
+        return new Docket(DocumentationType.SWAGGER_2)
+                .apiInfo(apiInfo())
+                .select()
+                .apis(RequestHandlerSelectors.basePackage("ma.s2m.clients.api"))
+                .paths(PathSelectors.any())
+                .build().securitySchemes(Arrays.asList(securityScheme()))
+                .securityContexts(Arrays.asList(securityContext()));
+    }
+
+    private ApiInfo apiInfo() {
+        return new ApiInfoBuilder()
+                .title("Client Management Rest APIs")
+                .description("This page lists all the rest apis for Clients Management App.")
+                .version("1.0-SNAPSHOT").contact(new Contact("Reda EL GHALLOUCH", "www.s2mworldwide.com", "ghalou.reda@gmail.com"))
+                .build();
+    }
+
+    @Bean
+    public SecurityConfiguration security() {
+        return SecurityConfigurationBuilder.builder().realm(realm).clientId(clientID).clientSecret(clientSecret).appName(groupName).scopeSeparator(" ").build();
+    }
+
+    private SecurityScheme securityScheme() {
+        GrantType grantType = new AuthorizationCodeGrantBuilder().tokenEndpoint(new TokenEndpoint(authServer + "/realms/" + realm + "/protocol/openid-connect/token", groupName)).tokenRequestEndpoint(new TokenRequestEndpoint(authServer + "/realms/" + realm + "/protocol/openid-connect/auth", clientID, clientSecret)).build();
+        return new OAuthBuilder().name(OAUTH_NAME).grantTypes(Arrays.asList(grantType)).build();
+    }
+
+    private SecurityContext securityContext() {
+        return SecurityContext.builder().securityReferences(Arrays.asList(new SecurityReference(OAUTH_NAME, new AuthorizationScope[0]))).forPaths(PathSelectors.any()).build();
+    }
+}
+
+```
+- Add the following config to the application.yml file :
+```yml
+...
+spring:
+  application:
+    name: client-service
+...
+swagger-ui:
+  client: swagger-ui
+  secret: cc3a371e-c495-4b0b-b1eb-c87f50c0f103
+```
+- Restart the client-service application, launch the swagger HMI, click on Authorize and Connect.
+
+#### Use Postman to request APIs via Keycloak (by script)
