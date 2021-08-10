@@ -10,7 +10,7 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<!-- Project Description -->
-	<groupId>ma.s2m.clients</groupId>
+	<groupId>ma.hero.clients</groupId>
 	<artifactId>client-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>client-service</name>
@@ -22,6 +22,7 @@
 		<maven-jar-plugin.version>3.1.1</maven-jar-plugin.version>
 		<swagger.version>2.9.2</swagger.version>
 		<keycloak.version>14.0.0</keycloak.version>
+		<spring-cloud.version>Hoxton.SR8</spring-cloud.version>
 	</properties>
 
 	<!-- Dependencies -->
@@ -101,6 +102,12 @@
 			<artifactId>springfox-swagger-ui</artifactId>
 			<version>${swagger.version}</version>
 		</dependency>
+
+		<!-- This dependency is used to ... -->
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-openfeign</artifactId>
+		</dependency>
 	</dependencies>
 
 	<dependencyManagement>
@@ -110,6 +117,14 @@
 				<groupId>org.keycloak.bom</groupId>
 				<artifactId>keycloak-adapter-bom</artifactId>
 				<version>${keycloak.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<!-- This dependency is used to ... -->
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>${spring-cloud.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>

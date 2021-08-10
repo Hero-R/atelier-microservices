@@ -27,7 +27,7 @@ public class Client implements Serializable {
 ```
 + ClientRepository repository Spring-Data :
 ```java
-import ma.s2m.clients.domain.Client;
+import ma.hero.clients.domain.Client;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -38,7 +38,7 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
 ```
 + IClientService interface declaring CRUD operations for the Client entity :
 ```java
-import ma.s2m.clients.domain.Client;
+import ma.hero.clients.domain.Client;
 
 import java.util.List;
 
@@ -57,9 +57,9 @@ public interface IClientService {
 ```
 + ClientService service which implements IClientService by calling the ClientRepository repository :
 ```java
-import ma.s2m.clients.domain.Client;
-import ma.s2m.clients.repository.ClientRepository;
-import ma.s2m.clients.service.IClientService;
+import ma.hero.clients.domain.Client;
+import ma.hero.clients.repository.ClientRepository;
+import ma.hero.clients.service.IClientService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -84,8 +84,8 @@ public class ClientService implements IClientService {
 ```
 + ClientController Rest controller that uses the ClientService service to expose CRUD operations :
 ```java
-import ma.s2m.clients.domain.Client;
-import ma.s2m.clients.service.IClientService;
+import ma.hero.clients.domain.Client;
+import ma.hero.clients.service.IClientService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -259,7 +259,7 @@ The test via postman becomes inconclusive => 403 Forbidden !
 
 #### Updating tests
 Action: Take charge of the security layer and make the necessary changes.
-- Create the ma.s2m.clients.config package in the test folder.
+- Create the ma.hero.clients.config package in the test folder.
 - Add the following dependency in pom.xml :
 ```xml
 <dependency>
@@ -270,7 +270,7 @@ Action: Take charge of the security layer and make the necessary changes.
 ```
 - Add the following class (an annotation) in config package :
 ```java
-package ma.s2m.clients.config;
+package ma.hero.clients.config;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -286,7 +286,7 @@ public @interface WithMockOAuth2Conext {
 ```
 - Create the "WithMockOauth2SecurityContextFactory" class which will initiate a spring-security context by feeding it with the authorities declared in the "WithMockOauth2Context" annotation :
 ```java
-package ma.s2m.clients.config;
+package ma.hero.clients.config;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -363,7 +363,7 @@ Report: Launch the swagger HMI and retest your API => 401 Unauthorized !
 - Create a swagger-ui client with an accessType "confidential" to allow swagger to negotiate a token with Keycloak ;
 - Modify the "SwaggerConfig" class as follows :
 ```java
-package ma.s2m.clients.config;
+package ma.hero.clients.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -417,7 +417,7 @@ public class SwaggerConfig {
         return new Docket(DocumentationType.SWAGGER_2)
                 .apiInfo(apiInfo())
                 .select()
-                .apis(RequestHandlerSelectors.basePackage("ma.s2m.clients.api"))
+                .apis(RequestHandlerSelectors.basePackage("ma.hero.clients.api"))
                 .paths(PathSelectors.any())
                 .build().securitySchemes(Arrays.asList(securityScheme()))
                 .securityContexts(Arrays.asList(securityContext()));
@@ -427,7 +427,7 @@ public class SwaggerConfig {
         return new ApiInfoBuilder()
                 .title("Client Management Rest APIs")
                 .description("This page lists all the rest apis for Clients Management App.")
-                .version("1.0-SNAPSHOT").contact(new Contact("Reda EL GHALLOUCH", "www.s2mworldwide.com", "ghalou.reda@gmail.com"))
+                .version("1.0-SNAPSHOT").contact(new Contact("Reda EL GHALLOUCH", "www.hero.com", "ghalou.reda@gmail.com"))
                 .build();
     }
 
@@ -461,3 +461,114 @@ swagger-ui:
 - Restart the client-service application, launch the swagger HMI, click on Authorize and Connect.
 
 #### Use Postman to request APIs via Keycloak (by script)
+```javascript
+const tokenUrl = 'http://localhost:8080/auth/admin/master/console/realms/ms-workshop/protocol/openid-connect/token';
+
+const retrieveTokenRequest = {
+  method: 'POST',
+  url: tokenUrl,
+  body: {
+    mode: 'urlencoded',
+    urlencoded: [
+      { key: 'grant_type', value: 'password' },
+      { key: 'client_id', value: 'swagger-ui' },
+      { key: 'client_secret', value: 'cc3a371e-c495-4b0b-b1eb-c87f50c0f103' },
+      { key: 'username', value: 'reda' },
+      { key: 'password', value: 'reda' }
+    ]
+  }
+};
+
+pm.sendRequest(retrieveTokenRequest, (err, response) => {
+  console.log(response);
+  const jsonResponse = response.json();
+  const token = jsonResponse.access_token;
+
+  pm.variables.set('access_token', token);
+});
+```
+
+### Implementing advanced REST clients with Spring Cloud and Netflix Feign
+#### Declarative REST Client: Feign
+- To begin with, we are going to create a new service: « sales-service » ;
+- To retrieve the sales of a client X, « client-service » uses a Feign client (SalesClient) to call « sales-service » which exposes the path « / api / sales / client / {clientId} » ;
+- Develop the « sales-service » CRUD ;
+- In the pom of the two projects « client-service » and « sales-service », we will add :
+```xml
+<properties>
+  ...
+  <spring-cloud.version>Hoxton.SR8</spring-cloud.version>
+</properties>
+...
+...
+<dependencyManagement>
+  ...
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-dependencies</artifactId>
+      <version>${spring-cloud.version}</version>
+      <type>pom</type>
+      <scope>import</scope>
+    </dependency>
+  </dependencies>
+</dependencyManagement>
+```
+- Add the following dependency (only for « client-service ») :
+```xml
+<dependency>
+  <groupId>org.springframework.cloud</groupId>
+  <artifactId>spring-cloud-starter-openfeign</artifactId>
+</dependency>
+```
+- Add the @EnableFeignClients annotation in « ClientServiceApplication » :
+```java
+@SpringBootApplication
+@EnableSwagger2
+@EnableFeignClients
+public class ClientServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(ClientServiceApplication.class, args);
+	}
+
+}
+```
+- In « sales-service », add getSalesByClient() method in "SaleController" and add its service method ;
+- In « client-service », create a package ma.hero.clients.api.feign and another ma.hero.clients.dto ;
+- Add the SaleDto class which contains the attributes of the Sale class with the getters and setters;
+- Add the feign SalesClient interface :
+```java
+package ma.hero.clients.api.feign;
+
+import ma.hero.clients.dto.SaleDto;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+import java.util.List;
+
+@FeignClient(name = "sales-service", url = "http://localhost:9001")
+public interface SaleClient {
+
+    @GetMapping("/api/sale/client/{id}")
+    List<SaleDto> getClientSales(@PathVariable("id") Long clientId);
+}
+
+```
+- In "ClientController", add the injection of the "SaleClient" client :
+```java
+  @Autowired
+  private SaleClient saleClient;
+```
+- Then, add the following method to expose the path « / api / client / {id} / sales » :
+```java
+  // ------------------- Retrieve Client Sales -----------------------------------------
+  @GetMapping(value = "/{id}/sales")
+  public ResponseEntity<List<SaleDto>> getClientSales(@PathVariable("id") long id) {
+      List<SaleDto> sales = saleClient.getClientSales(id);
+      return new ResponseEntity<>(sales, HttpStatus.OK);
+  }
+```
+- Start the both applications and test the new path REST via Swagger.  
+  => Tests are again conclusive.

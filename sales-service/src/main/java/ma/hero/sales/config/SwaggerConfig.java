@@ -20,20 +20,16 @@ public class SwaggerConfig {
         return new Docket(DocumentationType.SWAGGER_2)
                 .apiInfo(apiInfo())
                 .select()
-                .apis(RequestHandlerSelectors.basePackage("ma.omnishore.sales.api"))
+                .apis(RequestHandlerSelectors.basePackage("ma.hero.sales.api"))
                 .paths(PathSelectors.any())
                 .build();
     }
 
     private ApiInfo apiInfo() {
         return new ApiInfoBuilder()
-
                 .title("Sales Management Rest APIs")
-
                 .description("This page lists all the rest apis for Sales Management App.")
-
-                .version("1.0-SNAPSHOT").contact(new Contact("Amine BOUAGGAD", "www.omnidata.ma", "abouaggad@omnidata.ma"))
-
+                .version("1.0-SNAPSHOT").contact(new Contact("Reda EL GHALLOUCH", "www.hero.ma", "ghalou.reda@gmail.com"))
                 .build();
     }
 
