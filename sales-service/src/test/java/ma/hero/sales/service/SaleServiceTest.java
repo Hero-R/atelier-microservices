@@ -21,7 +21,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 import ma.hero.sales.SalesServiceApplication;
 import ma.hero.sales.domain.Sale;
 import ma.hero.sales.repository.SaleRepository;
-import ma.hero.sales.service.ISalesService;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = { SalesServiceApplication.class })
@@ -33,7 +32,7 @@ public class SaleServiceTest {
     private SaleRepository saleRepository;
 
     @Autowired
-    private ISalesService saleService;
+    private ISaleService saleService;
 
     private Long randomId;
 
