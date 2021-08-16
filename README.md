@@ -561,7 +561,7 @@ public interface SaleClient {
   @Autowired
   private SaleClient saleClient;
 ```
-- Then, add the following method to expose the path « / api / client / {id} / sales » :
+- Then, add the following method to expose the path « /api/client/{id}/sales » :
 ```java
   // ------------------- Retrieve Client Sales -----------------------------------------
   @GetMapping(value = "/{id}/sales")
@@ -572,3 +572,82 @@ public interface SaleClient {
 ```
 - Start the both applications and test the new path REST via Swagger.  
   => Tests are again conclusive.
+
+## Service Registration & Discovery - Eureka
+- Start by generating an Eureka Microservice on Spring Initializr by adding "Eureka Server" dependency to it ;
+- Add the following configuration to the application.yml file :
+```yml
+server:
+  port: 8761
+
+spring:
+  application:
+    name: eureka-server
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+    registerWithEureka: false
+    fetchRegistry: false
+```
+- Annotate the main class "EurekaServerApplication" by « @EnableEurekaServer » :
+```java
+package ma.hero.eurekaserver;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer;
+
+@SpringBootApplication
+@EnableEurekaServer
+public class EurekaServerApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(EurekaServerApplication.class, args);
+    }
+
+}
+```
+### Setting up Eureka
+- After running, we get the Eureka Server interface.
+
+### Eureka Client Configuration
+- In order for the different Microservices to start registering in our Eureka server, we must add the Eureka client to each of them ;
+- For the two microservices « client-service » & « sales-service » :
+  + Add the following dependency :
+```xml
+<dependency>
+  <groupId>org.springframework.cloud</groupId>
+  <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
+</dependency>
+```
+  + Then add this config in the application.yml of the two microservices :
+```yaml
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+```
+  + Add the @EnableDiscoveryClient annotation to the main class ;
+  + Start eureka-server, client-service and sales-service.
+
+### Feign Client Modification: SalesClient
+- To take advantage of the contribution of the Eureka server, modify the feign SalesClient client in « client-service » as follows :
+```java
+package ma.hero.clients.api.feign;
+
+import ma.hero.clients.dto.SaleDto;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+import java.util.List;
+
+@FeignClient(name = "sales-service")
+public interface SaleClient {
+    
+    // ...
+}
+```
+- Modify the port of « sales-service » or add another instance (java -jar -Dserver.port=9090 sales-service-0.0.1-SNAPSHOT.jar) ;
+- Repeat the test by calling « sales-service » from « client-service » via feign.
