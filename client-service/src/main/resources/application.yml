@@ -15,6 +15,11 @@ spring:
     username: root
     password:
 
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+
 keycloak:
   realm: ms-workshop
   auth-server-url: http://localhost:8080/auth
